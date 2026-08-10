@@ -20,6 +20,7 @@ from lib.system import system
 from lib        import observation_format as observation
 from lib        import derived_variables  as derive
 from lib        import properties
+from lib.extended_forecast import empty_days, normalize_daily_forecast
 
 # Import required Kivy modules
 from kivy.network.urlrequest import UrlRequest
@@ -40,6 +41,7 @@ class forecast():
     def __init__(self):
         self.app = App.get_running_app()
         self.met_data = properties.Met()
+        self.met_data['Daily'] = empty_days()
 
     def reset_forecast(self):
 
@@ -49,10 +51,14 @@ class forecast():
 
         # Reset the forecast and schedule new forecast to be generated
         self.met_data = properties.Met()
+        self.met_data['Daily'] = empty_days()
         self.update_display()
         if hasattr(self.app, 'ForecastPanel'):
             for panel in getattr(self.app, 'ForecastPanel'):
                 panel.setForecastIcon()
+        if hasattr(self.app, 'ExtendedForecastPanel'):
+            for panel in getattr(self.app, 'ExtendedForecastPanel'):
+                panel.setForecastDays()
         Clock.schedule_once(self.fetch_forecast)
 
     def fetch_forecast(self, *largs):
@@ -131,6 +137,7 @@ class forecast():
         self.met_data['Conditions']   = ''
         self.met_data['Icon']         = '-'
         self.met_data['Status']       = 'Forecast currently\nunavailable...'
+        self.met_data['Daily']        = empty_days()
 
         # Update display
         self.update_display()
@@ -139,6 +146,9 @@ class forecast():
         if hasattr(self.app, 'ForecastPanel'):
             for panel in getattr(self.app, 'ForecastPanel'):
                 panel.setForecastIcon()
+        if hasattr(self.app, 'ExtendedForecastPanel'):
+            for panel in getattr(self.app, 'ExtendedForecastPanel'):
+                panel.setForecastDays()
 
         # Schedule new forecast to be downloaded in 5 minutes. Note secondsSched
         # refers to number of seconds since the function was last called.
@@ -269,6 +279,10 @@ class forecast():
             self.met_data['Conditions']   = Conditions
             self.met_data['Icon']         = Icon
             self.met_data['Status']       = ''
+            self.met_data['Daily']        = normalize_daily_forecast(
+                dailyForecasts,
+                self.app.config['Station']['Timezone'],
+                self.app.config['Units']['Temp'])
 
             # Check expected conditions icon is recognised
             if Icon in ['clear-day', 'clear-night', 'rainy', 'possibly-rainy-day',
@@ -288,6 +302,9 @@ class forecast():
             if hasattr(self.app, 'ForecastPanel'):
                 for panel in getattr(self.app, 'ForecastPanel'):
                     panel.setForecastIcon()
+            if hasattr(self.app, 'ExtendedForecastPanel'):
+                for panel in getattr(self.app, 'ExtendedForecastPanel'):
+                    panel.setForecastDays()
 
             # Schedule new forecast
             Clock.schedule_once(self.schedule_forecast)

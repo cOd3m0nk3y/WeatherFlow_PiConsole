@@ -852,7 +852,8 @@ def default_config_file():
     config =                    collections.OrderedDict()
     config['Keys'] =            collections.OrderedDict([('description',           '  API keys'),
                                                          ('WeatherFlow',           {'type': 'user_input', 'state': 'required',         'desc': 'WeatherFlow Access Token',     'format': str}),
-                                                         ('CheckWX',               {'type': 'user_input', 'state': 'required',         'desc': 'CheckWX API Key',              'format': str})])
+                                                         ('CheckWX',               {'type': 'user_input', 'state': 'required',         'desc': 'CheckWX API Key',              'format': str}),
+                                                         ('AirNow',                {'type': 'user_input', 'state': 'optional',         'desc': 'AirNow API Key',               'format': str})])
     config['Station'] =         collections.OrderedDict([('description',           '  Station and device IDs'),
                                                          ('StationID',             {'type': 'user_input', 'state': 'required',         'desc': 'Station ID',                   'format': int}),
                                                          ('TempestID',             {'type': 'user_input', 'state': 'required',         'desc': 'TEMPEST device ID',            'format': int}),
@@ -901,6 +902,14 @@ def default_config_file():
                                                          ('Warm',                  {'type': 'default',   'value': '20',               'desc': '"Feels warm" cut-off temperature'}),
                                                          ('Hot',                   {'type': 'default',   'value': '25',               'desc': '"Feels hot" cut-off temperature'}),
                                                          ('VeryHot',               {'type': 'default',   'value': '30',               'desc': '"Feels very hot" cut-off temperature'})])
+    config['AirNow'] =          collections.OrderedDict([('description',           '  AirNow air-quality settings'),
+                                                         ('Radius',                {'type': 'default',   'value': '25',               'desc': 'map radius in miles'}),
+                                                         ('RefreshInterval',       {'type': 'default',   'value': '60',               'desc': 'refresh interval in minutes'})])
+    config['Radar'] =           collections.OrderedDict([('description',           '  NWS radar settings'),
+                                                         ('Radius',                {'type': 'default',   'value': '50',               'desc': 'map radius in miles'}),
+                                                         ('ZoomOutLimit',          {'type': 'default',   'value': '0',                'desc': 'maximum automatic zoom-out steps; 0 searches until found'}),
+                                                         ('Animation',             {'type': 'default',   'value': '0',                'desc': 'animate the previous hour of radar'}),
+                                                         ('RefreshInterval',       {'type': 'default',   'value': '5',                'desc': 'refresh interval in minutes'})])
     config['PrimaryPanels'] =   collections.OrderedDict([('description',           '  Primary panel layout'),
                                                          ('PanelOne',              {'type': 'default',   'value': 'Forecast',         'desc': 'Primary display for Panel One'}),
                                                          ('PanelTwo',              {'type': 'default',   'value': 'Temperature',      'desc': 'Primary display for Panel Two'}),
@@ -915,6 +924,13 @@ def default_config_file():
                                                          ('PanelFour',             {'type': 'default',   'value': 'MoonPhase',        'desc': 'Secondary display for Panel Four'}),
                                                          ('PanelFive',             {'type': 'default',   'value': '',                 'desc': 'Secondary display for Panel Five'}),
                                                          ('PanelSix',              {'type': 'default',   'value': 'Lightning',        'desc': 'Secondary display for Panel Six'})])
+    config['TertiaryPanels'] =  collections.OrderedDict([('description',           '  Tertiary panel layout'),
+                                                         ('PanelOne',              {'type': 'default',   'value': '',                 'desc': 'Tertiary display for Panel One'}),
+                                                         ('PanelTwo',              {'type': 'default',   'value': '',                 'desc': 'Tertiary display for Panel Two'}),
+                                                         ('PanelThree',            {'type': 'default',   'value': 'Radar',            'desc': 'Tertiary display for Panel Three'}),
+                                                         ('PanelFour',             {'type': 'default',   'value': 'ExtendedForecast', 'desc': 'Tertiary display for Panel Four'}),
+                                                         ('PanelFive',             {'type': 'default',   'value': '',                 'desc': 'Tertiary display for Panel Five'}),
+                                                         ('PanelSix',              {'type': 'default',   'value': '',                 'desc': 'Tertiary display for Panel Six'})])
     config['System'] =          collections.OrderedDict([('description',           '  System settings'),
                                                          ('Connection',            {'type': 'dependent',                              'desc': 'Connection type',     'value': 'Websocket'}),
                                                          ('rest_api',              {'type': 'dependent',                              'desc': 'REST API services',   'value': 1}),

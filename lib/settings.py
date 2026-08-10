@@ -47,7 +47,7 @@ if Path('user/customPanels.py').is_file():
     for cls in inspect.getmembers(user.customPanels, inspect.isclass):
         if cls[1].__module__ == 'user.customPanels' and 'Panel' in cls[0]:
             customPanels.append(cls[0].split('Panel')[0])
-PanelList = ['Forecast', 'Sager', 'Temperature', 'WindSpeed', 'SunriseSunset', 'MoonPhase', 'Rainfall', 'Lightning', 'Barometer']
+PanelList = ['Forecast', 'ExtendedForecast', 'AirNow', 'Radar', 'Sager', 'Temperature', 'WindSpeed', 'SunriseSunset', 'MoonPhase', 'Rainfall', 'Lightning', 'Barometer']
 primaryPanelList = PanelList + customPanels
 secondaryPanelList = ['None'] + PanelList + customPanels
 
@@ -321,6 +321,38 @@ def JSON(Section):
                   'desc': 'Set the maximum temperature for "Feeling hot"', 'section': 'FeelsLike', 'key': 'Hot'},
                  {'type': 'ToggleTemperature', 'title': 'Very Hot',
                   'desc': 'Set the maximum temperature for "Feeling very hot"', 'section': 'FeelsLike', 'key': 'VeryHot'}
+                 ]
+    elif 'Tertiary' in Section:
+        Data =  [{'type': 'ScrollOptions', 'options': secondaryPanelList, 'title': 'Panel One',
+                  'desc': 'Set tertiary display for Panel One', 'section': 'TertiaryPanels', 'key': 'PanelOne'},
+                 {'type': 'ScrollOptions', 'options': secondaryPanelList, 'title': 'Panel Two',
+                  'desc': 'Set tertiary display for Panel Two', 'section': 'TertiaryPanels', 'key': 'PanelTwo'},
+                 {'type': 'ScrollOptions', 'options': secondaryPanelList, 'title': 'Panel Three',
+                  'desc': 'Set tertiary display for Panel Three', 'section': 'TertiaryPanels', 'key': 'PanelThree'},
+                 {'type': 'ScrollOptions', 'options': secondaryPanelList, 'title': 'Panel Four',
+                  'desc': 'Set tertiary display for Panel Four', 'section': 'TertiaryPanels', 'key': 'PanelFour'},
+                 {'type': 'ScrollOptions', 'options': secondaryPanelList, 'title': 'Panel Five',
+                  'desc': 'Set tertiary display for Panel Five', 'section': 'TertiaryPanels', 'key': 'PanelFive'},
+                 {'type': 'ScrollOptions', 'options': secondaryPanelList, 'title': 'Panel Six',
+                  'desc': 'Set tertiary display for Panel Six', 'section': 'TertiaryPanels', 'key': 'PanelSix'}]
+    elif 'AirNow' in Section:
+        Data =  [{'type': 'string', 'title': 'AirNow API key',
+                  'desc': 'API key from AirNowAPI.org', 'section': 'Keys', 'key': 'AirNow'},
+                 {'type': 'FixedOptions', 'options': ['10', '25', '50', '75', '100'],
+                  'title': 'Map radius (miles)', 'desc': 'Area shown around the configured station',
+                  'section': 'AirNow', 'key': 'Radius'}
+                 ]
+    elif 'Radar' in Section:
+        Data =  [{'type': 'FixedOptions', 'options': ['25', '50', '75', '100', '150'],
+                  'title': 'Map radius (miles)', 'desc': 'Area shown around the configured station',
+                  'section': 'Radar', 'key': 'Radius'},
+                 {'type': 'FixedOptions', 'options': ['0', '1', '2'],
+                  'title': 'Maximum zoom-out steps',
+                  'desc': '0 keeps expanding until precipitation is found',
+                  'section': 'Radar', 'key': 'ZoomOutLimit'},
+                 {'type': 'bool', 'title': 'Animate radar',
+                  'desc': 'Loop NOAA radar frames from the previous hour',
+                  'section': 'Radar', 'key': 'Animation'}
                  ]
     elif 'System' in Section:
         Data =  [{'type': 'FixedOptions', 'options': ['Websocket', 'UDP'], 'title': 'Connection',

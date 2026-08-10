@@ -93,8 +93,11 @@ else:
 # Initialise mouse support if required
 if int(config['Display']['Cursor']):
     kivyconfig.set('graphics', 'show_cursor', '1')
+    # Desktop Kivy otherwise treats right-click and the mouse wheel as
+    # simulated multitouch, drawing an orange touch circle that can appear to
+    # zoom static map images. Keep ordinary left-click mouse support only.
+    kivyconfig.set('input', 'mouse', 'mouse,disable_multitouch')
     if 'Pi' in config['System']['Hardware']:
-        kivyconfig.set('input', 'mouse', 'mouse')
         kivyconfig.remove_option('input', 'mtdev_%(name)s')
 else:
     kivyconfig.set('graphics', 'show_cursor', '0')
@@ -123,6 +126,8 @@ from kivy.app                import App
 from lib.system       import system
 from lib.astronomical import astro
 from lib.forecast     import forecast
+from lib.airnow       import airnow
+from lib.radar        import radar
 from lib.sager        import sager_forecast
 from lib.status       import station
 from lib              import settings     as userSettings
@@ -137,7 +142,10 @@ from panels.barometer   import BarometerPanel,     BarometerButton              
 from panels.lightning   import LightningPanel,     LightningButton              # type: ignore
 from panels.wind        import WindSpeedPanel,     WindSpeedButton              # type: ignore
 from panels.forecast    import ForecastPanel,      ForecastButton               # type: ignore
+from panels.forecast    import ExtendedForecastPanel, ExtendedForecastButton   # type: ignore
 from panels.forecast    import SagerPanel,         SagerButton                  # type: ignore
+from panels.airnow      import AirNowPanel,        AirNowButton                 # type: ignore
+from panels.radar       import RadarPanel,         RadarButton                  # type: ignore
 from panels.rainfall    import RainfallPanel,      RainfallButton               # type: ignore
 from panels.astro       import SunriseSunsetPanel, SunriseSunsetButton          # type: ignore
 from panels.astro       import MoonPhasePanel,     MoonPhaseButton              # type: ignore
@@ -245,8 +253,11 @@ class wfpiconsole(App):
         settings.add_json_panel('Display',          self.config, data=userSettings.JSON('Display'))
         settings.add_json_panel('Primary Panels',   self.config, data=userSettings.JSON('Primary'))
         settings.add_json_panel('Secondary Panels', self.config, data=userSettings.JSON('Secondary'))
+        settings.add_json_panel('Tertiary Panels',  self.config, data=userSettings.JSON('Tertiary'))
         settings.add_json_panel('Units',            self.config, data=userSettings.JSON('Units'))
         settings.add_json_panel('Feels Like',       self.config, data=userSettings.JSON('FeelsLike'))
+        settings.add_json_panel('AirNow',           self.config, data=userSettings.JSON('AirNow'))
+        settings.add_json_panel('Radar',            self.config, data=userSettings.JSON('Radar'))
         settings.add_json_panel('System',           self.config, data=userSettings.JSON('System'))
         self.use_kivy_settings = False
         self.settings = settings
@@ -332,8 +343,17 @@ class wfpiconsole(App):
             self.set_scale_factor(self.window, self.window.width, self.window.height)
             Clock.schedule_once(self.CurrentConditions.add_panels)
 
-        # Update primary and secondary panels displayed on CurrentConditions
-        # screen
+        # Rebuild panel cycles when any panel assignment changes. This supports
+        # primary, secondary and tertiary entries while keeping the pill button
+        # pointed at the next panel in each ordered cycle.
+        if section in ['PrimaryPanels', 'SecondaryPanels', 'TertiaryPanels']:
+            if value == 'None':
+                self.config.set(section, key, '')
+                self.config.write()
+            Clock.schedule_once(self.CurrentConditions.add_panels)
+            return
+
+        # Legacy two-panel update path retained for older configurations.
         if section in ['PrimaryPanels', 'SecondaryPanels']:
             panel_list = ['panel_' + Num for Num in ['one', 'two', 'three', 'four', 'five', 'six']]
             for ii, (panel, type) in enumerate(self.config['PrimaryPanels'].items()):
@@ -472,6 +492,8 @@ class CurrentConditions(Screen):
     Astro  = DictProperty()
     Obs    = DictProperty()
     Met    = DictProperty()
+    AirQuality = DictProperty()
+    Radar = DictProperty()
 
     def __init__(self, **kwargs):
         super(CurrentConditions, self).__init__(**kwargs)
@@ -482,6 +504,8 @@ class CurrentConditions(Screen):
         self.Sager  = properties.Sager()
         self.Astro  = properties.Astro()
         self.Met    = properties.Met()
+        self.AirQuality = properties.AirQuality()
+        self.Radar = properties.Radar()
         self.Obs    = properties.Obs()
 
         # Add display panels
@@ -506,6 +530,14 @@ class CurrentConditions(Screen):
         self.app.forecast = forecast()
         self.app.Sched.metDownload = Clock.schedule_once(self.app.forecast.fetch_forecast)
 
+        # Schedule EPA AirNow observation download
+        self.app.airnow = airnow()
+        self.app.Sched.airnow = Clock.schedule_once(self.app.airnow.fetch)
+
+        # Schedule NWS radar map download
+        self.app.radar = radar()
+        self.app.Sched.radar = Clock.schedule_once(self.app.radar.fetch)
+
         # Generate Sager Weathercaster forecast
         self.app.sager = sager_forecast()
         self.app.Sched.sager = Clock.schedule_once(self.app.sager.fetch_forecast)
@@ -527,6 +559,7 @@ class CurrentConditions(Screen):
         self.button_list = []
         primary_panels    = tuple(self.app.config['PrimaryPanels'].items())
         secondary_panels  = tuple(self.app.config['SecondaryPanels'].items())
+        tertiary_panels   = tuple(self.app.config['TertiaryPanels'].items())
         if self.app.config['Display']['PanelCount'] == '1':
             panel_ids = [['panel_'  + number for number in ['one']]]
             button_ids = ['button_' + number for number in ['one']]
@@ -547,12 +580,18 @@ class CurrentConditions(Screen):
                 button_id   = button_ids[button_count]
                 primary_panel     = primary_panels[panel_count][1]
                 secondary_panel   = secondary_panels[panel_count][1]
+                tertiary_panel    = tertiary_panels[panel_count][1]
+                panel_cycle = []
+                for panel in [primary_panel, secondary_panel, tertiary_panel]:
+                    if panel and panel != 'None' and panel not in panel_cycle:
+                        panel_cycle.append(panel)
                 self.ids[panel_id] = BoxLayout()
                 self.ids[panel_id].add_widget(eval(primary_panel + 'Panel')())
                 row_box_layout.add_widget(self.ids[panel_id])
-                if secondary_panel:
-                    self.ids[button_id].add_widget(eval(secondary_panel + 'Button')())
-                    self.button_list.append([button_id, panel_id, primary_panel, secondary_panel, 'primary'])
+                if len(panel_cycle) > 1:
+                    self.ids[button_id].add_widget(eval(panel_cycle[1] + 'Button')())
+                    self.button_list.append([button_id, panel_id, primary_panel,
+                                             secondary_panel, 'primary', panel_cycle, 0])
                     button_count += 1
                 panel_count += 1
 
@@ -580,18 +619,17 @@ class CurrentConditions(Screen):
         # Extract panel object that corresponds to the button that has been
         # pressed and determine new button type required
         panel_object = self.ids[button_data[1]].children
-        panel_number = 'Panel' + button_data[1].split('_')[1].title()
-        panel_type   = button_data[4].title() + 'Panels'
-        new_button   = self.app.config[panel_type][panel_number]
-        if panel_type == 'PrimaryPanels':
-            new_panel = self.app.config['SecondaryPanels'][panel_number]
-        elif panel_type == 'SecondaryPanels':
-            new_panel = self.app.config['PrimaryPanels'][panel_number]
+        panel_cycle = button_data[5]
+        current_index = button_data[6]
+        new_index = (current_index + 1) % len(panel_cycle)
+        new_panel = panel_cycle[new_index]
+        new_button = panel_cycle[(new_index + 1) % len(panel_cycle)]
 
         # Destroy reference to old panel class attribute
-        if hasattr(self.app, new_button + 'Panel'):
+        old_panel_name = panel_cycle[current_index]
+        if hasattr(self.app, old_panel_name + 'Panel'):
             try:
-                getattr(self.app, new_button + 'Panel').remove(panel_object[0])
+                getattr(self.app, old_panel_name + 'Panel').remove(panel_object[0])
             except ValueError:
                 Logger.warning('Unable to remove panel reference from wfpiconsole class')
 
@@ -607,10 +645,8 @@ class CurrentConditions(Screen):
         self.ids[button_data[0]].add_widget(eval(new_button + 'Button')())
 
         # Update button list
-        if button_data[4] == 'primary':
-            self.button_list[ii][4] = 'secondary'
-        elif button_data[4] == 'secondary':
-            self.button_list[ii][4] = 'primary'
+        self.button_list[ii][4] = 'primary' if new_index == 0 else 'secondary'
+        self.button_list[ii][6] = new_index
 
 # ==============================================================================
 # RUN APP

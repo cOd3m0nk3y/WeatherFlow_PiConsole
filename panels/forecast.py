@@ -17,10 +17,12 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
 # Load required Kivy modules
 from kivy.uix.relativelayout import RelativeLayout
-from kivy.properties         import StringProperty
+from kivy.uix.floatlayout    import FloatLayout
+from kivy.properties         import BooleanProperty, DictProperty, ListProperty, StringProperty
 
 # Load required panel modules
 from panels.template         import panelTemplate
+from lib.extended_forecast   import empty_day, empty_days
 
 
 # ==============================================================================
@@ -42,6 +44,30 @@ class ForecastPanel(panelTemplate):
 
 
 class ForecastButton(RelativeLayout):
+    pass
+
+
+# ==============================================================================
+# EXTENDED FORECAST PANEL AND BUTTON
+# ==============================================================================
+class ExtendedForecastDay(FloatLayout):
+    day = DictProperty(empty_day())
+    compact = BooleanProperty(False)
+
+
+class ExtendedForecastPanel(panelTemplate):
+    days = ListProperty(empty_days())
+
+    def __init__(self, mode=None, **kwargs):
+        super().__init__(mode, **kwargs)
+        self.setForecastDays()
+
+    def setForecastDays(self):
+        days = self.app.CurrentConditions.Met.get('Daily') or empty_days()
+        self.days = list(days)
+
+
+class ExtendedForecastButton(RelativeLayout):
     pass
 
 

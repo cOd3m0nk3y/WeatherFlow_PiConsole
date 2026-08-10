@@ -1,0 +1,24 @@
+<RadarPanel>:
+    PanelBackground:
+        _panelTitle: 'Radar'
+    Image:
+        source: app.CurrentConditions.Radar['Map']
+        fit_mode: 'cover'
+        size_hint: (250/262, 162/202)
+        pos_hint: {'x': 6/262, 'y': 24/202}
+    SmallField:
+        text: app.CurrentConditions.Radar['Label'] + ' · ' + app.CurrentConditions.Radar['Coverage'] + ' precip · ' + app.CurrentConditions.Radar['Updated']
+        font_size: dp(7*app.scaleFactor)
+        size_hint: (170/262, 17/202)
+        pos_hint: {'x': 4/262, 'y': 4/202}
+    SmallField:
+        text: app.CurrentConditions.Radar['Radius'] + ' mi · NOAA/NWS · © OSM'
+        font_size: dp(7*app.scaleFactor)
+        halign: 'right'
+        size_hint: (90/262, 17/202)
+        pos_hint: {'x': 168/262, 'y': 4/202}
+
+<RadarButton>:
+    PanelButton:
+        text: 'Radar'
+        on_release: app.CurrentConditions.switchPanel(self)

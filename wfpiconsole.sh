@@ -88,6 +88,7 @@ WFPICONSOLE_DEPENDENCIES=(git curl rng-tools build-essential python3-dev python3
 
 # Python modules and versions
 PYTHON_MODULES=("websockets==15.0.1"
+                "Pillow>=11.0"
                 "numpy>=2.0.2"
                 "pytz==2025.2"
                 "tzlocal==5.3.1"

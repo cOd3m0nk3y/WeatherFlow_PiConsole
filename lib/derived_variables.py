@@ -162,10 +162,26 @@ def SLP(pressure, device, config):
 
     # Extract required configuration variables
     elevation = config['Station']['Elevation']
+    height = 0
     if str(device) in [config['Station']['OutAirID'], config['Station']['OutAirSN']]:
         height = config['Station']['OutAirHeight']
     elif str(device) in [config['Station']['TempestID'], config['Station']['TempestSN']]:
         height = config['Station']['TempestHeight']
+
+    # WeatherFlow station metadata does not always include the device mounting
+    # height. The station elevation is still sufficient for a useful SLP
+    # correction, so treat a missing height as ground level instead of
+    # terminating the observation and Sager forecast threads.
+    try:
+        elevation = float(elevation)
+    except (TypeError, ValueError):
+        Logger.warning(f'SLP: {system().log_time()} - station elevation is missing')
+        return error_output
+    try:
+        height = float(height)
+    except (TypeError, ValueError):
+        Logger.warning(f'SLP: {system().log_time()} - device height is missing; using 0 m')
+        height = 0.0
 
     # Define required constants
     P0      = 1013.25
@@ -173,7 +189,7 @@ def SLP(pressure, device, config):
     gamma_s = 0.0065
     g       = 9.80665
     T0      = 288.15
-    elevation = float(elevation) + float(height)
+    elevation += height
 
     # Calculate and return sea level pressure
     SLP = (pressure[0]

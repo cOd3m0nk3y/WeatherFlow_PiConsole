@@ -55,7 +55,7 @@ def Met():
             'lowTemp': '--',      'WindSpd': '--',      'WindGust': '--',
             'WindDir': '--',      'PrecipPercnt': '--', 'PrecipDay': '--',
             'PrecipAmount': '--', 'PrecipType': '--',   'Conditions': '-',
-            'Icon': '-',          'Status': '--'
+            'Icon': '-',          'Status': '--',        'Daily': []
             }
 
 
@@ -64,6 +64,17 @@ def Sager():
     """ Define the Sager property values """
 
     return {'Forecast': '-', 'Issued': '-'}
+
+
+def AirQuality():
+    return {'AQI': '--', 'Category': 'Unavailable', 'Pollutant': '--', 'Area': '--',
+            'Observed': '--', 'Color': '404040ff', 'Status': 'Waiting for AirNow',
+            'Map': '', 'MarkerX': .5, 'MarkerY': .5}
+
+
+def Radar():
+    return {'Map': '', 'Updated': '--', 'Status': 'Loading NWS radar',
+            'Radius': '--', 'Coverage': '--', 'Label': 'Loading'}
 
 
 def Status():

@@ -125,3 +125,105 @@
     PanelButton:
         text: 'Sager'
         on_release: app.CurrentConditions.switchPanel(self)
+
+## =============================================================================
+## EXTENDED 10-DAY FORECAST PANEL AND BUTTON
+## =============================================================================
+<ExtendedForecastDay>:
+    Label:
+        text: root.day['day']
+        color: utils.rgba('#ffffffff')
+        font_name: 'fonts/Inter-Bold.ttf'
+        font_size: dp((8 if root.compact else 12)*app.scaleFactor)
+        size_hint: (1, .18 if root.compact else .16)
+        pos_hint: {'x': 0, 'top': 1}
+    Label:
+        text: root.day['date'] if not root.compact else ''
+        color: utils.rgba('#807e76ff')
+        font_name: 'fonts/Inter-Regular.ttf'
+        font_size: dp(8*app.scaleFactor)
+        size_hint: (1, .10)
+        pos_hint: {'x': 0, 'top': .85}
+    Image:
+        source: 'icons/weather/' + root.day['icon'] + app.scaleSuffix
+        fit_mode: 'contain'
+        size_hint: (.78 if root.compact else .62, .38 if root.compact else .42)
+        pos_hint: {'center_x': .5, 'y': .36 if root.compact else .36}
+    Label:
+        text: '[color=f05e40ff]' + root.day['high'] + '[/color]' + ("\n" if root.compact else '  ') + '[color=00a4b4ff]' + root.day['low'] + '[/color]'
+        markup: True
+        color: utils.rgba('#c8c8c8ff')
+        font_name: 'fonts/Inter-SemiBold.ttf'
+        font_size: dp((7 if root.compact else 10)*app.scaleFactor)
+        line_height: .9
+        size_hint: (1, .23)
+        pos_hint: {'x': 0, 'y': .15 if root.compact else .16}
+    Label:
+        text: root.day['conditions'] if not root.compact else root.day['precip']
+        color: utils.rgba('#c8c8c8ff') if not root.compact else utils.rgba('#00a4b4ff')
+        font_name: 'fonts/Inter-Regular.ttf'
+        font_size: dp((7 if root.compact else 8)*app.scaleFactor)
+        max_lines: 1 if root.compact else 2
+        text_size: self.size
+        halign: 'center'
+        valign: 'center'
+        size_hint: (.96, .17 if root.compact else .20)
+        pos_hint: {'center_x': .5, 'y': 0}
+
+<ExtendedForecastPanel>:
+    PanelBackground:
+        _panelTitle: '10 Day Forecast'
+
+    ExtendedForecastDay:
+        day: root.days[0]
+        pos_hint: {'x': 5/262, 'y': 82/202}
+        size_hint: (80/262, 99/202)
+    ExtendedForecastDay:
+        day: root.days[1]
+        pos_hint: {'x': 91/262, 'y': 82/202}
+        size_hint: (80/262, 99/202)
+    ExtendedForecastDay:
+        day: root.days[2]
+        pos_hint: {'x': 177/262, 'y': 82/202}
+        size_hint: (80/262, 99/202)
+
+    ExtendedForecastDay:
+        day: root.days[3]
+        compact: True
+        pos_hint: {'x': 5/262, 'y': 5/202}
+        size_hint: (34/262, 71/202)
+    ExtendedForecastDay:
+        day: root.days[4]
+        compact: True
+        pos_hint: {'x': 41.3/262, 'y': 5/202}
+        size_hint: (34/262, 71/202)
+    ExtendedForecastDay:
+        day: root.days[5]
+        compact: True
+        pos_hint: {'x': 77.6/262, 'y': 5/202}
+        size_hint: (34/262, 71/202)
+    ExtendedForecastDay:
+        day: root.days[6]
+        compact: True
+        pos_hint: {'x': 113.9/262, 'y': 5/202}
+        size_hint: (34/262, 71/202)
+    ExtendedForecastDay:
+        day: root.days[7]
+        compact: True
+        pos_hint: {'x': 150.2/262, 'y': 5/202}
+        size_hint: (34/262, 71/202)
+    ExtendedForecastDay:
+        day: root.days[8]
+        compact: True
+        pos_hint: {'x': 186.5/262, 'y': 5/202}
+        size_hint: (34/262, 71/202)
+    ExtendedForecastDay:
+        day: root.days[9]
+        compact: True
+        pos_hint: {'x': 222.8/262, 'y': 5/202}
+        size_hint: (34/262, 71/202)
+
+<ExtendedForecastButton>:
+    PanelButton:
+        text: '10 Day'
+        on_release: app.CurrentConditions.switchPanel(self)
