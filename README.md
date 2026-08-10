@@ -31,6 +31,7 @@ https://community.weatherflow.com/
 **[Advanced: Custom Panels](#advanced-custom-panels)**<br>
 **[Advanced: Device Replacement](#advanced-device-replacement)**<br>
 **[Advanced: Windows Installation](#advanced-installation-windows)**<br>
+**[Fork Features: AirNow, Radar, and Extended Forecast](docs/FORK_FEATURES.md)**<br>
 **[Credits](#credits)**<br>
 
 ## Compatibility

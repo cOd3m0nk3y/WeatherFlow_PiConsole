@@ -218,7 +218,7 @@ def update():
     current_config = configparser.ConfigParser(allow_no_value=True)
     current_config.optionxform = str
     current_config.read('wfpiconsole.ini')
-    current_version = current_config['System']['Version']
+    current_version = current_config.get('System', 'Version', fallback='0')
 
     # NEW VERSION DETECTED. GENERATE UPDATED CONFIGURATION FILE
     # --------------------------------------------------------------------------
@@ -275,11 +275,34 @@ def update():
     #  VERSION UNCHANGED. VERIFY STATION AND DEVICE DETAILS FOR EXISTING
     # CONFIGURATION
     # --------------------------------------------------------------------------
-    elif version.parse(current_version) == version.parse(latest_version):
+    else:
+        merge_missing_defaults(current_config)
         if current_config['System']['rest_api'] and int(current_config['System']['rest_api']):
             current_config = verify_station(current_config)
         with open('wfpiconsole.ini', 'w') as config_file:
             current_config.write(config_file)
+
+
+def merge_missing_defaults(config, defaults=None):
+
+    """Add missing schema sections/options without changing existing values.
+
+    This supports fork features added without changing Pete Davis's upstream
+    application version. API credentials and required user-input fields are
+    created empty so an update never prompts or invents private values.
+    """
+
+    defaults = defaults or default_config_file()
+    for section, options in defaults.items():
+        if not config.has_section(section):
+            config.add_section(section)
+        for key, details in options.items():
+            if key == 'description' or config.has_option(section, key):
+                continue
+            value = details.get('value', '')
+            config.set(section, key, str(value))
+            Logger.info('Config: Adding missing option {}.{}'.format(section, key))
+    return config
 
 
 def verify_station(config):
