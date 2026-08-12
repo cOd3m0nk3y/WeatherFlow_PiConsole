@@ -18,3 +18,4 @@ cache/
 
 # Ignore Python virtual environment
 venv/
+.python-runtime/

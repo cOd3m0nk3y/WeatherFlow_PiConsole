@@ -147,8 +147,8 @@
     Image:
         source: 'icons/weather/' + root.day['icon'] + app.scaleSuffix
         fit_mode: 'contain'
-        size_hint: (.78 if root.compact else .62, .38 if root.compact else .42)
-        pos_hint: {'center_x': .5, 'y': .36 if root.compact else .36}
+        size_hint: (.78 if root.compact else .62, .38)
+        pos_hint: {'center_x': .5, 'y': .36 if root.compact else .40}
     Label:
         text: '[color=f05e40ff]' + root.day['high'] + '[/color]' + ("\n" if root.compact else '  ') + '[color=00a4b4ff]' + root.day['low'] + '[/color]'
         markup: True
@@ -156,8 +156,8 @@
         font_name: 'fonts/Inter-SemiBold.ttf'
         font_size: dp((7 if root.compact else 10)*app.scaleFactor)
         line_height: .9
-        size_hint: (1, .23)
-        pos_hint: {'x': 0, 'y': .15 if root.compact else .16}
+        size_hint: (1, .23 if root.compact else .17)
+        pos_hint: {'x': 0, 'y': .15 if root.compact else .25}
     Label:
         text: root.day['conditions'] if not root.compact else root.day['precip']
         color: utils.rgba('#c8c8c8ff') if not root.compact else utils.rgba('#00a4b4ff')
@@ -167,8 +167,19 @@
         text_size: self.size
         halign: 'center'
         valign: 'center'
-        size_hint: (.96, .17 if root.compact else .20)
+        size_hint: (.96, .17)
+        pos_hint: {'center_x': .5, 'y': 0 if root.compact else .08}
+    Label:
+        text: (root.day['precip'] + ' precip') if not root.compact else ''
+        color: utils.rgba('#00a4b4ff')
+        font_name: 'fonts/Inter-SemiBold.ttf'
+        font_size: dp(7*app.scaleFactor)
+        text_size: self.size
+        halign: 'center'
+        valign: 'center'
+        size_hint: (.96, .07)
         pos_hint: {'center_x': .5, 'y': 0}
+        opacity: 0 if root.compact else 1
 
 <ExtendedForecastPanel>:
     PanelBackground:

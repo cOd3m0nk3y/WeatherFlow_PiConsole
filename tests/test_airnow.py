@@ -1,6 +1,6 @@
 import unittest
 
-from lib.airnow import parse_airnow_csv, parse_contours
+from lib.airnow import format_observed, parse_airnow_csv, parse_contours
 from lib.map_utils import centered_crop, map_tile, map_zoom
 
 
@@ -14,6 +14,12 @@ class AirNowTests(unittest.TestCase):
         self.assertEqual(result['Category'], 'Moderate')
         self.assertEqual(result['Pollutant'], 'PM2.5')
         self.assertEqual(result['Color'], 'ffff00ff')
+
+    def test_formats_airnow_publication_time_with_zone(self):
+        observed = format_observed({'DateObserved': '2026-08-11',
+                                    'HourObserved': '7',
+                                    'LocalTimeZone': 'MST'})
+        self.assertEqual(observed, 'Aug 11 07:00 MST')
 
     def test_larger_radius_uses_lower_zoom(self):
         self.assertGreater(map_zoom(39.4, 10), map_zoom(39.4, 100))

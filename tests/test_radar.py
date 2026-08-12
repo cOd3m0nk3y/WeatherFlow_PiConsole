@@ -97,9 +97,12 @@ class RadarTests(unittest.TestCase):
         self.assertEqual(list(zoom_levels(8, 2)), [8, 7, 6])
 
     def test_house_marker_uses_console_blue_at_map_center(self):
-        image = Image.new('RGBA', (512, 320), (255, 255, 255, 255))
+        image = Image.new('RGBA', (512, 320), (0, 0, 0, 255))
         draw_house_marker(image)
-        self.assertEqual(image.getpixel((256, 152)), (0, 164, 180, 255))
+        self.assertEqual(image.getpixel((256, 160)), (0, 164, 180, 255))
+        self.assertEqual(image.getpixel((256, 165)), (17, 17, 17, 255))
+        self.assertEqual(image.getpixel((256, 170)), (255, 255, 255, 255))
+        self.assertEqual(image.getpixel((256, 175)), (0, 0, 0, 255))
 
 
 if __name__ == '__main__':

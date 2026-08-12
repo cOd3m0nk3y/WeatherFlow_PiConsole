@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 import certifi
-from PIL import Image, ImageDraw
+from PIL import Image
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.logger import Logger
@@ -23,6 +23,8 @@ TIME_SERVICE_URL = ('https://mapservices.weather.noaa.gov/eventdriven/rest/'
                     'services/radar/radar_base_reflectivity_time/ImageServer')
 MIN_RADAR_COVERAGE = .1
 RADAR_EDGE_MARGIN = 12
+HOUSE_MARKER_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                 'icons', 'radar', 'house-marker-v2.png')
 
 
 def empty_radar(status='Loading NWS radar'):
@@ -132,17 +134,12 @@ def zoom_levels(configured_zoom, zoom_out_limit, minimum_zoom=3):
 
 
 def draw_house_marker(image):
-    """Draw the configured station as a small PiConsole-blue house outline."""
-    center_x, center_y = image.width // 2, image.height // 2
-    points = [(center_x - 8, center_y), (center_x, center_y - 8),
-              (center_x + 8, center_y), (center_x + 6, center_y),
-              (center_x + 6, center_y + 8), (center_x + 1, center_y + 8),
-              (center_x + 1, center_y + 3), (center_x - 2, center_y + 3),
-              (center_x - 2, center_y + 8), (center_x - 6, center_y + 8),
-              (center_x - 6, center_y), (center_x - 8, center_y)]
-    drawing = ImageDraw.Draw(image)
-    drawing.line(points, fill=(0, 0, 0, 230), width=5, joint='curve')
-    drawing.line(points, fill=(0, 164, 180, 255), width=3, joint='curve')
+    """Composite the generated station marker at the map center."""
+    with Image.open(HOUSE_MARKER_PATH) as source:
+        marker = source.convert('RGBA')
+    position = ((image.width - marker.width) // 2,
+                (image.height - marker.height) // 2)
+    image.alpha_composite(marker, position)
     return image
 
 
@@ -173,7 +170,7 @@ class radar:
         minute = minute.replace(minute=minute.minute - minute.minute % interval)
         stamp = minute.strftime('%Y%m%d%H%M')
         os.makedirs('cache', exist_ok=True)
-        path = ('cache/radar-centered-v9-{}-{}-{}-{:03d}-{:03d}-limit{}-anim{}-{}.png'
+        path = ('cache/radar-centered-v15-{}-{}-{}-{:03d}-{:03d}-limit{}-anim{}-{}.png'
                 .format(zoom, tile_x, tile_y, round(marker_x * 1000),
                         round(marker_y * 1000), zoom_out_limit, animation,
                         stamp))

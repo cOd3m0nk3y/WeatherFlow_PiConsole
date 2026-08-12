@@ -19,10 +19,10 @@
         size_hint: (96/262, 16/202)
         pos_hint: {'x': 2/262, 'y': 52/202}
     SmallMultilineField:
-        text: app.CurrentConditions.AirQuality['Area'] + '\n' + app.CurrentConditions.AirQuality['Observed']
+        text: app.CurrentConditions.AirQuality['Area'] + '\nObs ' + app.CurrentConditions.AirQuality['Observed'] + '\nChecked ' + app.CurrentConditions.AirQuality['Updated']
         size_hint: (96/262, 43/202)
         pos_hint: {'x': 2/262, 'y': 5/202}
-        font_size: dp(10*app.scaleFactor)
+        font_size: dp(8*app.scaleFactor)
     Image:
         source: app.CurrentConditions.AirQuality['Map']
         fit_mode: 'cover'

@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 from PIL import Image, ImageDraw
 
@@ -30,8 +31,23 @@ AQI_CATEGORIES = ((50, 'Good', '00e400ff'), (100, 'Moderate', 'ffff00ff'),
 
 def empty_air_quality(status='Waiting for AirNow'):
     return {'AQI': '--', 'Category': 'Unavailable', 'Pollutant': '--', 'Area': '--',
-            'Observed': '--', 'Color': '404040ff', 'Status': status, 'Map': '',
-            'MarkerX': .5, 'MarkerY': .5}
+            'Observed': '--', 'Updated': '--', 'Color': '404040ff',
+            'Status': status, 'Map': '', 'MarkerX': .5, 'MarkerY': .5}
+
+
+def format_observed(row):
+    date = str(row.get('DateObserved', '')).strip()
+    try:
+        date = datetime.strptime(date, '%Y-%m-%d').strftime('%b %d')
+    except ValueError:
+        pass
+    raw_hour = str(row.get('HourObserved', '')).strip()
+    try:
+        hour = '{:02d}:00'.format(int(float(raw_hour)))
+    except ValueError:
+        hour = raw_hour
+    zone = str(row.get('LocalTimeZone', '')).strip()
+    return ' '.join(value for value in (date, hour, zone) if value) or '--'
 
 
 def parse_airnow_csv(text):
@@ -48,8 +64,7 @@ def parse_airnow_csv(text):
     aqi, row = max(valid, key=lambda item: item[0])
     category, color = next(((name, color) for limit, name, color in AQI_CATEGORIES
                             if aqi <= limit), ('Beyond AQI', '7e0023ff'))
-    observed = '{} {}'.format(row.get('DateObserved', ''),
-                              (str(row.get('HourObserved', '')) + ':00')).strip()
+    observed = format_observed(row)
     area = row.get('ReportingAreaName', row.get('ReportingArea', '--'))
     state = row.get('StateCode', '')
     if state:
@@ -117,6 +132,11 @@ class airnow:
             zoom = map_zoom(latitude, radius)
             tile_x, tile_y, marker_x, marker_y = map_tile(latitude, longitude, zoom)
             data['Map'] = self.data.get('Map', '')
+            try:
+                station_zone = ZoneInfo(self.app.config['Station']['Timezone'])
+            except Exception:
+                station_zone = datetime.now().astimezone().tzinfo
+            data['Updated'] = datetime.now(station_zone).strftime('%H:%M')
             data['MarkerX'] = .5
             data['MarkerY'] = .5
             self.data = data
