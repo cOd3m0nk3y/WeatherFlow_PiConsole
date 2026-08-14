@@ -297,8 +297,10 @@ class wfpiconsole(App):
         # times when time format changed
         if section == 'Display' and key == 'TimeFormat':
             self.forecast.parse_forecast()
-            self.astro.format_labels('Sun')
-            self.astro.format_labels('Moon')
+            self.astro.format_event_labels('sun')
+            self.astro.format_event_labels('moon')
+            self.airnow.fetch()
+            self.radar.fetch()
 
         # Show or hide indoor temperature when setting is changed
         if section == 'Display' and key == 'IndoorTemp':

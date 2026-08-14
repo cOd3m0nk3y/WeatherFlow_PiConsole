@@ -1,6 +1,11 @@
 import unittest
+from datetime import datetime, timezone
 
-from lib.airnow import format_observed, parse_airnow_csv, parse_contours
+from PIL import Image
+
+from lib.airnow import (area_tint, contour_hours, format_observed,
+                        is_rate_limited, parse_airnow_csv, parse_contours,
+                        preserve_map_state, refresh_minutes)
 from lib.map_utils import centered_crop, map_tile, map_zoom
 
 
@@ -20,6 +25,18 @@ class AirNowTests(unittest.TestCase):
                                     'HourObserved': '7',
                                     'LocalTimeZone': 'MST'})
         self.assertEqual(observed, 'Aug 11 07:00 MST')
+
+    def test_formats_airnow_publication_time_as_12_hour(self):
+        observed = format_observed({'DateObserved': '2026-08-11',
+                                    'HourObserved': '19:00',
+                                    'LocalTimeZone': 'MDT'}, '12 hr')
+        self.assertEqual(observed, 'Aug 11 7:00 PM MDT')
+
+    def test_formats_airnow_publication_time_with_seconds(self):
+        observed = format_observed({'DateObserved': '2026-08-11',
+                                    'HourObserved': '07:30:00',
+                                    'LocalTimeZone': 'MDT'}, '12 hr')
+        self.assertEqual(observed, 'Aug 11 7:30 AM MDT')
 
     def test_larger_radius_uses_lower_zoom(self):
         self.assertGreater(map_zoom(39.4, 10), map_zoom(39.4, 100))
@@ -55,6 +72,40 @@ class AirNowTests(unittest.TestCase):
         </LinearRing></Polygon></Placemark></Document></kml>'''
         points = parse_contours(kml)[0][1]
         self.assertEqual(points[0], (-105.2, 39.1))
+
+    def test_uses_older_contour_hour_early_in_hour(self):
+        now = datetime(2026, 8, 14, 13, 10, tzinfo=timezone.utc)
+        self.assertEqual(contour_hours(now), ['2026081411'])
+
+    def test_bounds_contour_fallback_to_two_hours(self):
+        now = datetime(2026, 8, 14, 13, 45, tzinfo=timezone.utc)
+        self.assertEqual(contour_hours(now), ['2026081412', '2026081411'])
+
+    def test_recognizes_airnow_rate_limit(self):
+        error = type('RateLimit', (), {'code': 429})()
+        self.assertTrue(is_rate_limited(error=error))
+
+    def test_area_tint_uses_aqi_color(self):
+        image = Image.new('RGBA', (1, 1), (0, 0, 0, 255))
+        tinted = area_tint(image, '00e400ff')
+        red, green, blue, _alpha = tinted.getpixel((0, 0))
+        self.assertEqual(red, 0)
+        self.assertGreater(green, 0)
+        self.assertEqual(blue, 0)
+
+    def test_airnow_refresh_never_runs_more_than_hourly(self):
+        self.assertEqual(refresh_minutes('15'), 60)
+        self.assertEqual(refresh_minutes('120'), 120)
+
+    def test_observation_refresh_preserves_complete_map_state(self):
+        observation = {'AQI': '34'}
+        result = preserve_map_state(
+            observation, {'Map': 'cache/map.png',
+                          'MapStatus': 'Area AQI tint'})
+        self.assertEqual(result['Map'], 'cache/map.png')
+        self.assertEqual(result['MapStatus'], 'Area AQI tint')
+        self.assertEqual(result['MarkerX'], .5)
+        self.assertEqual(result['MarkerY'], .5)
 
 
 if __name__ == '__main__':

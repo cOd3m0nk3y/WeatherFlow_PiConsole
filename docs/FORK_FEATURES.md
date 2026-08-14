@@ -106,6 +106,13 @@ the listed options so other panel and credential settings remain intact.
 ### AirNow options
 
 - `Radius`: local contour-map radius in miles.
+- `RefreshInterval`: observation refresh interval in minutes. AirNow polling is
+  clamped to a minimum of 60 minutes to protect API keys shared with other apps.
+
+When current contour polygons are unavailable, the AirNow panel uses a uniform,
+translucent tint matching the current reporting-area AQI. The panel labels this
+as an area AQI tint so it is not mistaken for a spatial contour. Rate-limited or
+failed observation updates retain the last reading and mark it as stale.
 - `RefreshInterval`: observation and map refresh interval in minutes.
 - `Keys.AirNow`: API key obtained from AirNowAPI.org.
 

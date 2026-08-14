@@ -1,6 +1,7 @@
 <AirNowPanel>:
     PanelBackground:
         _panelTitle: 'Air Quality'
+        _panelStatus: app.CurrentConditions.AirQuality['Status']
     Label:
         text: app.CurrentConditions.AirQuality['AQI']
         font_name: 'fonts/Inter-Light.ttf'
@@ -28,11 +29,11 @@
         fit_mode: 'cover'
         size_hint: (155/262, 148/202)
         pos_hint: {'x': 102/262, 'y': 27/202}
-    SmallField:
-        text: str(app.config['AirNow']['Radius']) + ' mi radius · © OpenStreetMap'
-        font_size: dp(7*app.scaleFactor)
-        size_hint: (155/262, 17/202)
-        pos_hint: {'x': 102/262, 'y': 5/202}
+    SmallMultilineField:
+        text: app.CurrentConditions.AirQuality['MapStatus'] + '\n' + str(app.config['AirNow']['Radius']) + ' mi · © OpenStreetMap'
+        font_size: dp(6*app.scaleFactor)
+        size_hint: (155/262, 22/202)
+        pos_hint: {'x': 102/262, 'y': 3/202}
 
 <AirNowButton>:
     PanelButton:

@@ -8,11 +8,14 @@ import ssl
 import threading
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from PIL import Image, ImageDraw
+
+from lib.time_format import format_clock
 
 import certifi
 from kivy.app import App
@@ -32,10 +35,52 @@ AQI_CATEGORIES = ((50, 'Good', '00e400ff'), (100, 'Moderate', 'ffff00ff'),
 def empty_air_quality(status='Waiting for AirNow'):
     return {'AQI': '--', 'Category': 'Unavailable', 'Pollutant': '--', 'Area': '--',
             'Observed': '--', 'Updated': '--', 'Color': '404040ff',
-            'Status': status, 'Map': '', 'MarkerX': .5, 'MarkerY': .5}
+            'Status': status, 'Map': '', 'MapStatus': 'Loading map',
+            'MarkerX': .5, 'MarkerY': .5}
 
 
-def format_observed(row):
+def contour_hours(now):
+    """Return at most two likely-published AirNow contour hours."""
+    age = 2 if now.minute < 30 else 1
+    hours = [now - timedelta(hours=age)]
+    if age == 1:
+        hours.append(now - timedelta(hours=2))
+    return [value.strftime('%Y%m%d%H') for value in hours]
+
+
+def is_rate_limited(request=None, error=None):
+    """Recognize Kivy and urllib forms of an AirNow HTTP 429 response."""
+    status = getattr(request, 'resp_status', None)
+    return (status == 429 or getattr(error, 'code', None) == 429 or
+            'request limit exceeded' in str(error).lower())
+
+
+def area_tint(image, color):
+    """Apply a reporting-area AQI tint when spatial contours are unavailable."""
+    try:
+        red, green, blue = (int(color[index:index + 2], 16)
+                            for index in (0, 2, 4))
+    except (TypeError, ValueError):
+        red, green, blue = 128, 128, 128
+    overlay = Image.new('RGBA', image.size, (red, green, blue, 72))
+    return Image.alpha_composite(image, overlay)
+
+
+def refresh_minutes(configured):
+    """Protect shared AirNow API keys from overly frequent polling."""
+    return max(60, int(configured))
+
+
+def preserve_map_state(data, previous):
+    """Carry map fields across an independently refreshed observation."""
+    data['Map'] = previous.get('Map', '')
+    data['MapStatus'] = previous.get('MapStatus', 'Loading map')
+    data['MarkerX'] = .5
+    data['MarkerY'] = .5
+    return data
+
+
+def format_observed(row, time_format='24 hr'):
     date = str(row.get('DateObserved', '')).strip()
     try:
         date = datetime.strptime(date, '%Y-%m-%d').strftime('%b %d')
@@ -43,14 +88,19 @@ def format_observed(row):
         pass
     raw_hour = str(row.get('HourObserved', '')).strip()
     try:
-        hour = '{:02d}:00'.format(int(float(raw_hour)))
+        if ':' in raw_hour:
+            observed_time = datetime.strptime(
+                raw_hour, '%H:%M:%S' if raw_hour.count(':') == 2 else '%H:%M')
+        else:
+            observed_time = datetime(2000, 1, 1, int(float(raw_hour)))
+        hour = format_clock(observed_time, time_format)
     except ValueError:
         hour = raw_hour
     zone = str(row.get('LocalTimeZone', '')).strip()
     return ' '.join(value for value in (date, hour, zone) if value) or '--'
 
 
-def parse_airnow_csv(text):
+def parse_airnow_csv(text, time_format='24 hr'):
     rows = list(csv.DictReader(io.StringIO(text.lstrip('\ufeff'))))
     valid = []
     for row in rows:
@@ -64,7 +114,7 @@ def parse_airnow_csv(text):
     aqi, row = max(valid, key=lambda item: item[0])
     category, color = next(((name, color) for limit, name, color in AQI_CATEGORIES
                             if aqi <= limit), ('Beyond AQI', '7e0023ff'))
-    observed = format_observed(row)
+    observed = format_observed(row, time_format)
     area = row.get('ReportingAreaName', row.get('ReportingArea', '--'))
     state = row.get('StateCode', '')
     if state:
@@ -125,20 +175,20 @@ class airnow:
 
     def success(self, request, response):
         try:
-            data = parse_airnow_csv(response)
+            time_format = self.app.config['Display']['TimeFormat']
+            data = parse_airnow_csv(response, time_format)
             latitude = float(self.app.config['Station']['Latitude'])
             longitude = float(self.app.config['Station']['Longitude'])
             radius = int(self.app.config['AirNow']['Radius'])
             zoom = map_zoom(latitude, radius)
             tile_x, tile_y, marker_x, marker_y = map_tile(latitude, longitude, zoom)
-            data['Map'] = self.data.get('Map', '')
+            preserve_map_state(data, self.data)
             try:
                 station_zone = ZoneInfo(self.app.config['Station']['Timezone'])
             except Exception:
                 station_zone = datetime.now().astimezone().tzinfo
-            data['Updated'] = datetime.now(station_zone).strftime('%H:%M')
-            data['MarkerX'] = .5
-            data['MarkerY'] = .5
+            data['Updated'] = format_clock(datetime.now(station_zone),
+                                           time_format)
             self.data = data
         except (TypeError, ValueError) as error:
             self.fail(None, str(error))
@@ -149,12 +199,20 @@ class airnow:
 
     def fetch_map(self, zoom, tile_x, tile_y, marker_x, marker_y):
         os.makedirs('cache', exist_ok=True)
-        hour = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime('%Y%m%d%H')
-        path = ('cache/airnow-centered-v2-{}-{}-{}-{:03d}-{:03d}-{}.png'
+        hours = contour_hours(datetime.now(timezone.utc))
+        path = ('cache/airnow-centered-v3-{}-{}-{}-{:03d}-{:03d}-{}.png'
                 .format(zoom, tile_x, tile_y, round(marker_x * 1000),
-                        round(marker_y * 1000), hour))
+                        round(marker_y * 1000), hours[0]))
         if os.path.isfile(path):
-            self.map_ready(path)
+            map_status, panel_status = 'AirNow map · cached', None
+            try:
+                with open(path + '.status', encoding='utf-8') as status_file:
+                    values = status_file.read().splitlines()
+                map_status = values[0]
+                panel_status = values[1] if len(values) > 1 else None
+            except OSError:
+                pass
+            self.map_ready(path, map_status, panel_status)
             return
         latitude = float(self.app.config['Station']['Latitude'])
         longitude = float(self.app.config['Station']['Longitude'])
@@ -164,12 +222,13 @@ class airnow:
         worker = threading.Thread(
             target=self.build_centered_map,
             args=(path, zoom, tile_x, tile_y, marker_x, marker_y, latitude,
-                  longitude, radius, key, timeout, hour), daemon=True)
+                  longitude, radius, key, timeout, hours,
+                  self.data.get('Color', '808080ff')), daemon=True)
         worker.start()
 
     def build_centered_map(self, path, zoom, tile_x, tile_y, marker_x,
                            marker_y, latitude, longitude, radius, key,
-                           timeout, hour):
+                           timeout, hours, color):
         """Download, composite and center the map without blocking Kivy's UI."""
         try:
             context = ssl.create_default_context(cafile=certifi.where())
@@ -189,26 +248,41 @@ class airnow:
                                         (offset_y + 1) * 256))
 
             kml = None
-            try:
-                kml = self.download_contours(latitude, longitude, radius, key,
-                                             timeout, hour, context)
-                if not parse_contours(kml):
-                    raise ValueError('AirNow returned no contour polygons')
+            rate_limited = False
+            for hour in hours:
+                try:
+                    candidate = self.download_contours(
+                        latitude, longitude, radius, key, timeout, hour, context)
+                    if parse_contours(candidate):
+                        kml = candidate
+                        break
+                except HTTPError as error:
+                    if is_rate_limited(error=error):
+                        rate_limited = True
+                        break
+                except Exception:
+                    continue
+
+            if kml:
                 mosaic = self.add_contours(mosaic, kml, zoom, tile_x, tile_y)
-            except Exception:
-                if os.path.isfile('cache/airnow-last-good.png'):
-                    Logger.info('AirNow: live contours unavailable; using last map')
-                else:
-                    Logger.warning('AirNow: contours unavailable; retry scheduled')
-                Clock.schedule_once(
-                    lambda _dt: self.map_retry(zoom, tile_x, tile_y, marker_x,
-                                               marker_y), 0)
-                return
+                map_status = 'AirNow contours'
+                panel_status = 'EPA AirNow · Preliminary'
+            else:
+                mosaic = area_tint(mosaic, color)
+                map_status = ('Area AQI tint · API limit' if rate_limited else
+                              'Area AQI tint · contours unavailable')
+                panel_status = ('API Key Limit Exceeded' if rate_limited else
+                                'Contours unavailable · area AQI shown')
+                Logger.warning('AirNow: {}; using area AQI tint'.format(
+                    'API request limit exceeded' if rate_limited else
+                    'contours unavailable'))
 
             image = mosaic.crop(centered_crop(marker_x, marker_y))
             image.save(path)
-            image.save('cache/airnow-last-good.png')
-            Clock.schedule_once(lambda _dt: self.map_ready(path), 0)
+            with open(path + '.status', 'w', encoding='utf-8') as status_file:
+                status_file.write(map_status + '\n' + panel_status)
+            Clock.schedule_once(
+                lambda _dt: self.map_ready(path, map_status, panel_status), 0)
         except Exception:
             Logger.warning('AirNow: unable to update centered local map')
 
@@ -244,36 +318,32 @@ class airnow:
             drawing.polygon(pixels, fill=color)
         return Image.alpha_composite(image, overlay)
 
-    def map_ready(self, path):
+    def map_ready(self, path, map_status='AirNow contours', panel_status=None):
         if hasattr(self.app.Sched, 'airnow_map_retry'):
             self.app.Sched.airnow_map_retry.cancel()
         self.data['Map'] = path
+        self.data['MapStatus'] = map_status
+        if panel_status:
+            self.data['Status'] = panel_status
         self.update_display()
-
-    def map_retry(self, zoom, tile_x, tile_y, marker_x, marker_y):
-        """Keep the last contour map visible and retry transient API failures."""
-        fallback = 'cache/airnow-last-good.png'
-        if os.path.isfile(fallback):
-            self.data['Map'] = fallback
-            self.update_display()
-        if hasattr(self.app.Sched, 'airnow_map_retry'):
-            self.app.Sched.airnow_map_retry.cancel()
-        self.app.Sched.airnow_map_retry = Clock.schedule_once(
-            lambda _dt: self.fetch_map(zoom, tile_x, tile_y, marker_x, marker_y),
-            5 * 60)
 
     def map_fail(self, *args):
         Logger.warning('AirNow: unable to update local map tile')
 
     def fail(self, request, error):
         Logger.warning('AirNow: unable to update air-quality observation')
+        rate_limited = is_rate_limited(request, error)
         if self.data.get('AQI', '--') == '--':
-            self.data = empty_air_quality('AirNow update unavailable')
+            self.data = empty_air_quality(
+                'API Key Limit Exceeded' if rate_limited else
+                'AirNow update unavailable')
         else:
             self.data = dict(self.data)
-            self.data['Status'] = 'AirNow update unavailable · showing last reading'
+            self.data['Status'] = (
+                'API Key Limit Exceeded · stale reading' if rate_limited else
+                'AirNow unavailable · stale reading')
         self.update_display()
-        self.schedule(5)
+        self.schedule()
 
     def update_display(self):
         self.app.CurrentConditions.AirQuality = dict(self.data)
@@ -281,5 +351,6 @@ class airnow:
     def schedule(self, minutes=None):
         if hasattr(self.app.Sched, 'airnow'):
             self.app.Sched.airnow.cancel()
-        interval = minutes or int(self.app.config['AirNow']['RefreshInterval'])
+        interval = refresh_minutes(
+            minutes or self.app.config['AirNow']['RefreshInterval'])
         self.app.Sched.airnow = Clock.schedule_once(self.fetch, interval * 60)

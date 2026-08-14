@@ -69,8 +69,8 @@ def Sager():
 def AirQuality():
     return {'AQI': '--', 'Category': 'Unavailable', 'Pollutant': '--', 'Area': '--',
             'Observed': '--', 'Updated': '--', 'Color': '404040ff',
-            'Status': 'Waiting for AirNow', 'Map': '', 'MarkerX': .5,
-            'MarkerY': .5}
+            'Status': 'Waiting for AirNow', 'Map': '',
+            'MapStatus': 'Loading map', 'MarkerX': .5, 'MarkerY': .5}
 
 
 def Radar():

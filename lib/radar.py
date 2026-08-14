@@ -16,6 +16,7 @@ from kivy.clock import Clock
 from kivy.logger import Logger
 
 from lib.map_utils import centered_crop, map_tile, map_zoom
+from lib.time_format import format_clock
 
 
 WMS_URL = 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows'
@@ -314,20 +315,21 @@ class radar:
             path, timestamp, coverage = self.frames[0]
             updated_text = self.format_frame_time(timestamp)
         else:
-            updated_text = updated.astimezone().strftime('%H:%M')
-        self.data = {'Map': path, 'Updated': updated.astimezone().strftime('%H:%M'),
+            updated_text = format_clock(
+                updated.astimezone(), self.app.config['Display']['TimeFormat'])
+        self.data = {'Map': path, 'Updated': updated_text,
                      'Status': status, 'Radius': str(radius),
                      'Coverage': coverage, 'Label': label}
-        self.data['Updated'] = updated_text
         self.update_display()
         if len(self.frames) > 1:
             self.app.Sched.radar_animation = Clock.schedule_interval(
                 self.animate_frame, 1.25)
 
-    @staticmethod
-    def format_frame_time(timestamp):
-        return datetime.fromtimestamp(
-            timestamp / 1000, timezone.utc).astimezone().strftime('%H:%M')
+    def format_frame_time(self, timestamp):
+        frame_time = datetime.fromtimestamp(
+            timestamp / 1000, timezone.utc).astimezone()
+        return format_clock(frame_time,
+                            self.app.config['Display']['TimeFormat'])
 
     def animate_frame(self, *args):
         if not self.frames:
