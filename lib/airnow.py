@@ -346,7 +346,13 @@ class airnow:
         self.schedule()
 
     def update_display(self):
-        self.app.CurrentConditions.AirQuality = dict(self.data)
+        try:
+            self.app.CurrentConditions.AirQuality = dict(self.data)
+            self._reference_error_logged = False
+        except ReferenceError:
+            if not getattr(self, '_reference_error_logged', False):
+                Logger.warning('AirNow: ignored stale panel binding during update')
+                self._reference_error_logged = True
 
     def schedule(self, minutes=None):
         if hasattr(self.app.Sched, 'airnow'):

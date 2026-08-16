@@ -133,6 +133,7 @@ from lib.status       import station
 from lib              import settings     as userSettings
 from lib              import properties
 from lib              import config
+from lib.kivy_utils   import unbind_children
 
 # ==============================================================================
 # IMPORT REQUIRED PANELS
@@ -552,7 +553,9 @@ class CurrentConditions(Screen):
         if 'row_layout' in self.ids:
             button_list = ['button_' + Num for Num in ['one', 'two', 'three', 'four', 'five', 'six']]
             for button in button_list:
+                unbind_children(self.ids[button])
                 self.ids[button].clear_widgets()
+            unbind_children(self.ids['row_layout'])
             self.ids['row_layout'].clear_widgets()
 
         # Define required variables
@@ -641,8 +644,10 @@ class CurrentConditions(Screen):
             mode = 'manual'
 
         # Switch panel
+        unbind_children(self.ids[button_data[1]])
         self.ids[button_data[1]].clear_widgets()
         self.ids[button_data[1]].add_widget(eval(new_panel + 'Panel')(mode))
+        unbind_children(self.ids[button_data[0]])
         self.ids[button_data[0]].clear_widgets()
         self.ids[button_data[0]].add_widget(eval(new_button + 'Button')())
 

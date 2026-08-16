@@ -65,6 +65,20 @@ This makes all of the following safe:
 Automatic migration is preferred. These are the feature-specific entries if
 manual editing is required:
 
+To add the settings and recommended panel cycle to an existing configuration,
+run this from the repository root:
+
+```bash
+./tools/add-fork-settings.sh
+```
+
+The script preserves existing settings and API keys, creates a timestamped
+backup, and keeps the new sections beside the other panel configuration. Add
+your AirNow API key afterward if it was not already present. Use
+`--config /path/to/wfpiconsole.ini` when the file is stored elsewhere.
+
+For manual editing, add or update these entries:
+
 ```ini
 [Keys]
 AirNow = YOUR_AIRNOW_API_KEY

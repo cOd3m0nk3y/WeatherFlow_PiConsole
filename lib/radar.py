@@ -351,7 +351,13 @@ class radar:
         self.update_display()
 
     def update_display(self):
-        self.app.CurrentConditions.Radar = dict(self.data)
+        try:
+            self.app.CurrentConditions.Radar = dict(self.data)
+            self._reference_error_logged = False
+        except ReferenceError:
+            if not getattr(self, '_reference_error_logged', False):
+                Logger.warning('Radar: ignored stale panel binding during update')
+                self._reference_error_logged = True
 
     def schedule(self):
         if hasattr(self.app.Sched, 'radar'):
