@@ -47,7 +47,7 @@ if Path('user/customPanels.py').is_file():
     for cls in inspect.getmembers(user.customPanels, inspect.isclass):
         if cls[1].__module__ == 'user.customPanels' and 'Panel' in cls[0]:
             customPanels.append(cls[0].split('Panel')[0])
-PanelList = ['Forecast', 'ExtendedForecast', 'AirNow', 'Radar', 'Sager', 'Temperature', 'WindSpeed', 'SunriseSunset', 'MoonPhase', 'Rainfall', 'Lightning', 'Barometer']
+PanelList = ['Forecast', 'ExtendedForecast', 'DailyTemperature', 'AirNow', 'Radar', 'Sager', 'Temperature', 'WindSpeed', 'SunriseSunset', 'MoonPhase', 'Rainfall', 'Lightning', 'Barometer']
 primaryPanelList = PanelList + customPanels
 secondaryPanelList = ['None'] + PanelList + customPanels
 
@@ -251,6 +251,10 @@ def JSON(Section):
                   'title': 'Lightning panel', 'section': 'Display', 'key': 'LightningPanel'},
                  {'type': 'ToggleMinutes', 'desc': 'Lightning panel timeout after strike is detected',
                   'title': 'Lightning timeout', 'section': 'Display', 'key': 'lightning_timeout'},
+                 {'type': 'bool', 'desc': 'Switch to Rainfall when measured rain is detected',
+                  'title': 'Rainfall panel', 'section': 'Display', 'key': 'RainfallPanel'},
+                 {'type': 'ToggleMinutes', 'desc': 'Restore the slot primary after rain stops',
+                  'title': 'Rainfall timeout', 'section': 'Display', 'key': 'rainfall_timeout'},
                  {'type': 'bool', 'desc': 'Show indoor temperature',
                   'title': 'Indoor temperature', 'section': 'Display', 'key': 'IndoorTemp'},
                  {'type': 'bool', 'desc': 'Show cursor',

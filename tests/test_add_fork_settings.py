@@ -27,6 +27,8 @@ class AddForkSettingsTests(unittest.TestCase):
         self.assertEqual(config['SecondaryPanels']['PanelThree'], 'AirNow')
         self.assertEqual(config['TertiaryPanels']['PanelThree'], 'Radar')
         self.assertEqual(config['TertiaryPanels']['PanelFour'], 'ExtendedForecast')
+        self.assertEqual(config['Display']['RainfallPanel'], '1')
+        self.assertEqual(config['Display']['rainfall_timeout'], '15')
 
     def test_preserves_existing_airnow_key(self):
         config = self.make_config()

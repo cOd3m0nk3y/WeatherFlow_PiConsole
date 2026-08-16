@@ -78,6 +78,14 @@ def Radar():
             'Radius': '--', 'Coverage': '--', 'Label': 'Loading'}
 
 
+def DailyTemperature():
+    return {'Actual': [], 'Baseline': [], 'CurrentForecast': [], 'NowHour': 0,
+            'Current': '--', 'ActualHighLow': '-- / --',
+            'ForecastHighLow': '-- / --',
+            'BaselineLabel': 'Baseline',
+            'Status': 'Loading daily temperatures'}
+
+
 def Status():
 
     """ Define the Status property values """

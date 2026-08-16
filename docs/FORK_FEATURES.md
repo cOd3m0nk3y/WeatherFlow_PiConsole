@@ -1,12 +1,42 @@
-# AirNow, Radar, and Extended Forecast Panels
+# AirNow, Radar, Extended Forecast, and Daily Temperature Panels
 
-This fork adds three PiConsole panels while retaining the styling and panel
+This fork adds four PiConsole panels while retaining the styling and panel
 configuration used by the upstream WeatherFlow PiConsole:
 
 - EPA AirNow observations and a station-centered air-quality contour map.
 - NOAA/NWS radar with configurable radius, adaptive zoom, precipitation
   coverage, and an optional one-hour animation.
 - A three-day detailed forecast followed by seven compact forecast days.
+- A midnight-to-midnight temperature graph showing actual observations and the
+  cached forecast through now, followed by the latest forecast through midnight.
+
+## Daily temperature and automatic rainfall display
+
+Select `DailyTemperature` in any Primary, Secondary, or Tertiary panel slot.
+For example, this keeps the temperature graph normally visible and makes
+Rainfall the next panel in the same pill-button cycle:
+
+```ini
+[PrimaryPanels]
+PanelFive = DailyTemperature
+
+[SecondaryPanels]
+PanelFive = Rainfall
+```
+
+When measured rain begins and Rainfall is not a primary panel, PiConsole
+automatically displays Rainfall in its configured slot. After rain stops it
+restores that slot's primary panel. The behavior is controlled by:
+
+```ini
+[Display]
+RainfallPanel = 1
+rainfall_timeout = 15
+```
+
+The timeout is the number of dry minutes before restoring the primary panel.
+The midnight forecast baseline is stored under the ignored `cache/` directory
+so it survives application restarts without entering source control.
 
 ## Install this fork
 

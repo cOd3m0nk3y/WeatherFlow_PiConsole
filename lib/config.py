@@ -910,6 +910,8 @@ def default_config_file():
                                                          ('PanelCount',            {'type': 'default',   'value': '6',                'desc': 'number of display panels'}),
                                                          ('LightningPanel',        {'type': 'default',   'value': '1',                'desc': 'lightning panel toggle'}),
                                                          ('lightning_timeout',     {'type': 'default',   'value': '0',                'desc': 'lightning panel timeout'}),
+                                                         ('RainfallPanel',         {'type': 'default',   'value': '1',                'desc': 'rainfall panel toggle'}),
+                                                         ('rainfall_timeout',      {'type': 'default',   'value': '15',               'desc': 'dry minutes before restoring primary panel'}),
                                                          ('IndoorTemp',            {'type': 'dependent',                              'desc': 'indoor temperature toggle'}),
                                                          ('Cursor',                {'type': 'default',   'value': '1',                'desc': 'cursor toggle'}),
                                                          ('Border',                {'type': 'default',   'value': '1',                'desc': 'border toggle'}),

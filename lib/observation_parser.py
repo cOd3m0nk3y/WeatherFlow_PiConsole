@@ -455,6 +455,14 @@ class obs_parser():
             device_type         Device type
         """
 
+        # Reuse the existing startup history response for the daily graph.
+        if device_type in ('obs_out_air', 'obs_st'):
+            today = self.api_data.get(device, {}).get('today')
+            if today is not None and hasattr(self.app, 'daily_temperature'):
+                temperature_index = 7 if device_type == 'obs_st' else 2
+                self.app.daily_temperature.ingest_history(
+                    today, temperature_index)
+
         # Derive variables from available obs_out_air and obs_st observations
         if device_type in ('obs_out_air', 'obs_st'):
             self.derive_obs['feelsLike']    = derive.feels_like(self.device_obs['outTemp'], self.device_obs['humidity'], self.device_obs['windSpd'], config)
@@ -663,6 +671,16 @@ class obs_parser():
                     if not reference_error:
                         Logger.warning(f'obs_parser: {system().log_time()} - Reference error {ob_type}')
                         reference_error = True
+
+        # Extend the daily temperature graph with raw observations and manage
+        # automatic Rainfall panel takeover from measured rain.
+        if ob_type in ('obs_st', 'obs_out_air'):
+            if hasattr(self.app, 'daily_temperature'):
+                self.app.daily_temperature.observe(
+                    self.device_obs['obTime'][0], self.device_obs['outTemp'][0])
+        if ob_type in ('obs_st', 'obs_sky', 'obs_all'):
+            self.app.CurrentConditions.handle_rainfall_takeover(
+                self.derive_obs['rainRate'][0])
 
         # Update display graphics with new derived observations
         if ob_type == 'rapid_wind':

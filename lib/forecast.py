@@ -108,6 +108,8 @@ class forecast():
 
         # Parse the latest daily and hourly weather forecast data
         self.met_data['Response'] = Response
+        if hasattr(self.app, 'daily_temperature'):
+            self.app.daily_temperature.update_forecast(Response)
         self.parse_forecast()
 
     def fail_forecast(self, *largs):

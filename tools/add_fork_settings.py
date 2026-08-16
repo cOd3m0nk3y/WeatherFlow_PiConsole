@@ -9,6 +9,7 @@ from datetime import datetime
 
 FEATURE_SETTINGS = {
     'Keys': {'AirNow': ''},
+    'Display': {'RainfallPanel': '1', 'rainfall_timeout': '15'},
     'AirNow': {'Radius': '25', 'RefreshInterval': '60'},
     'Radar': {
         'Radius': '50',
@@ -72,7 +73,7 @@ def ordered_config(config):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Add AirNow, radar, and extended forecast settings.')
+        description='Add fork panel and automatic rainfall settings.')
     parser.add_argument('--config', default='wfpiconsole.ini')
     args = parser.parse_args()
 

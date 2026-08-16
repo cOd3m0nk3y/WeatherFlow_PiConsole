@@ -126,6 +126,7 @@ from kivy.app                import App
 from lib.system       import system
 from lib.astronomical import astro
 from lib.forecast     import forecast
+from lib.daily_temperature import daily_temperature
 from lib.airnow       import airnow
 from lib.radar        import radar
 from lib.sager        import sager_forecast
@@ -134,6 +135,7 @@ from lib              import settings     as userSettings
 from lib              import properties
 from lib              import config
 from lib.kivy_utils   import unbind_children
+from lib.panel_cycles import rainfall_takeover_button
 
 # ==============================================================================
 # IMPORT REQUIRED PANELS
@@ -147,6 +149,7 @@ from panels.forecast    import ExtendedForecastPanel, ExtendedForecastButton   #
 from panels.forecast    import SagerPanel,         SagerButton                  # type: ignore
 from panels.airnow      import AirNowPanel,        AirNowButton                 # type: ignore
 from panels.radar       import RadarPanel,         RadarButton                  # type: ignore
+from panels.daily_temperature import DailyTemperaturePanel, DailyTemperatureButton # type: ignore
 from panels.rainfall    import RainfallPanel,      RainfallButton               # type: ignore
 from panels.astro       import SunriseSunsetPanel, SunriseSunsetButton          # type: ignore
 from panels.astro       import MoonPhasePanel,     MoonPhaseButton              # type: ignore
@@ -293,6 +296,8 @@ class wfpiconsole(App):
         if section == 'Units' and key in ['Temp', 'Wind']:
             self.forecast.parse_forecast()
             self.sager.get_forecast_text()
+            if key == 'Temp' and hasattr(self, 'daily_temperature'):
+                self.daily_temperature.reformat()
 
         # Update current weather forecast, sunrise/sunset and moonrise/moonset
         # times when time format changed
@@ -497,6 +502,7 @@ class CurrentConditions(Screen):
     Met    = DictProperty()
     AirQuality = DictProperty()
     Radar = DictProperty()
+    DailyTemperature = DictProperty()
 
     def __init__(self, **kwargs):
         super(CurrentConditions, self).__init__(**kwargs)
@@ -509,6 +515,7 @@ class CurrentConditions(Screen):
         self.Met    = properties.Met()
         self.AirQuality = properties.AirQuality()
         self.Radar = properties.Radar()
+        self.DailyTemperature = properties.DailyTemperature()
         self.Obs    = properties.Obs()
 
         # Add display panels
@@ -528,6 +535,10 @@ class CurrentConditions(Screen):
         # # Schedule sunTransit and moonPhase functions to be called each second
         self.app.Sched.sun_transit = Clock.schedule_interval(self.app.astro.sun_transit, 1.0)
         self.app.Sched.moon_phase  = Clock.schedule_interval(self.app.astro.moon_phase, 1.0)
+
+        # Initialise daily actual-versus-forecast temperature data before the
+        # first forecast response arrives.
+        self.app.daily_temperature = daily_temperature()
 
         # Schedule WeatherFlow weather forecast download
         self.app.forecast = forecast()
@@ -621,13 +632,25 @@ class CurrentConditions(Screen):
         if 'Lightning' in button_data and hasattr(self.app.Sched, 'lightning_panel_timeout'):
             self.app.Sched.lightning_panel_timeout.cancel()
 
-        # Extract panel object that corresponds to the button that has been
-        # pressed and determine new button type required
-        panel_object = self.ids[button_data[1]].children
         panel_cycle = button_data[5]
         current_index = button_data[6]
         new_index = (current_index + 1) % len(panel_cycle)
         new_panel = panel_cycle[new_index]
+
+        self.showPanel(button_data, new_panel,
+                       'auto' if button_overide else 'manual')
+
+    def showPanel(self, button_data, new_panel, mode='auto'):
+        """Show a specific panel in a configured panel cycle."""
+
+        panel_cycle = button_data[5]
+        if new_panel not in panel_cycle:
+            return False
+        current_index = button_data[6]
+        new_index = panel_cycle.index(new_panel)
+        if current_index == new_index:
+            return False
+        panel_object = self.ids[button_data[1]].children
         new_button = panel_cycle[(new_index + 1) % len(panel_cycle)]
 
         # Destroy reference to old panel class attribute
@@ -638,11 +661,6 @@ class CurrentConditions(Screen):
             except ValueError:
                 Logger.warning('Unable to remove panel reference from wfpiconsole class')
 
-        if button_overide:
-            mode = 'auto'
-        else:
-            mode = 'manual'
-
         # Switch panel
         unbind_children(self.ids[button_data[1]])
         self.ids[button_data[1]].clear_widgets()
@@ -652,8 +670,50 @@ class CurrentConditions(Screen):
         self.ids[button_data[0]].add_widget(eval(new_button + 'Button')())
 
         # Update button list
-        self.button_list[ii][4] = 'primary' if new_index == 0 else 'secondary'
-        self.button_list[ii][6] = new_index
+        for ii, entry in enumerate(self.button_list):
+            if entry[0] == button_data[0]:
+                self.button_list[ii][4] = ('primary' if new_index == 0
+                                           else 'secondary')
+                self.button_list[ii][6] = new_index
+                break
+        return True
+
+    def handle_rainfall_takeover(self, rain_rate):
+        """Switch to Rainfall while raining, then restore the slot primary."""
+
+        if not int(self.app.config['Display']['RainfallPanel']):
+            return
+        raining = rain_rate is not None and float(rain_rate) > 0
+        event = getattr(self.app.Sched, 'rainfall_panel_timeout', None)
+        if raining:
+            if event is not None:
+                event.cancel()
+                self.app.Sched.rainfall_panel_timeout = None
+            button = rainfall_takeover_button(self.button_list)
+            if button is not None:
+                panel_cycle = button[5]
+                if button[6] != panel_cycle.index('Rainfall'):
+                    self.showPanel(button, 'Rainfall', 'auto')
+                self._rainfall_takeover_button = button[0]
+            return
+
+        button_id = getattr(self, '_rainfall_takeover_button', None)
+        if button_id is None or event is not None:
+            return
+        timeout = int(self.app.config['Display']['rainfall_timeout']) * 60
+        self.app.Sched.rainfall_panel_timeout = Clock.schedule_once(
+            self.restore_primary_after_rain, timeout)
+
+    def restore_primary_after_rain(self, *args):
+        button_id = getattr(self, '_rainfall_takeover_button', None)
+        self.app.Sched.rainfall_panel_timeout = None
+        self._rainfall_takeover_button = None
+        for button in self.button_list:
+            if button[0] == button_id:
+                # Do not override a manual selection made after rain stopped.
+                if button[5][button[6]] == 'Rainfall':
+                    self.showPanel(button, button[5][0], 'auto')
+                break
 
 # ==============================================================================
 # RUN APP

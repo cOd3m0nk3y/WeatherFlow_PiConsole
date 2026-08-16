@@ -1,0 +1,75 @@
+## Daily actual-versus-forecast temperature panel
+
+<DailyTemperaturePanel>:
+    RainfallBackground:
+        _panelTitle: 'Daily Temperature'
+        _panelStatus: ''
+
+    TemperatureDayGraph:
+        id: chart
+        actual: app.CurrentConditions.DailyTemperature['Actual']
+        baseline: app.CurrentConditions.DailyTemperature['Baseline']
+        current_forecast: app.CurrentConditions.DailyTemperature['CurrentForecast']
+        now_hour: app.CurrentConditions.DailyTemperature['NowHour']
+        pos_hint: {'x': 30/262, 'y': 82/202}
+        size_hint: (222/262, 76/202)
+
+    SmallField:
+        text: chart.maximum_label
+        halign: 'right'
+        pos_hint: {'x': 0/262, 'y': 147/202}
+        size_hint_x: 28/262
+    SmallField:
+        text: chart.minimum_label
+        halign: 'right'
+        pos_hint: {'x': 0/262, 'y': 76/202}
+        size_hint_x: 28/262
+
+    SmallField:
+        text: '00'
+        pos_hint: {'x': 21/262, 'y': 66/202}
+        size_hint_x: 30/262
+    SmallField:
+        text: '06'
+        pos_hint: {'x': 77/262, 'y': 66/202}
+        size_hint_x: 30/262
+    SmallField:
+        text: '12'
+        pos_hint: {'x': 132/262, 'y': 66/202}
+        size_hint_x: 30/262
+    SmallField:
+        text: '18'
+        pos_hint: {'x': 188/262, 'y': 66/202}
+        size_hint_x: 30/262
+    SmallField:
+        text: '24'
+        pos_hint: {'x': 237/262, 'y': 66/202}
+        size_hint_x: 25/262
+
+    SmallField:
+        text: '[color=00b8c8ff]Actual[/color]  [color=a6a6a6ff]' + app.CurrentConditions.DailyTemperature['BaselineLabel'] + '[/color]  [color=ff5e40ff]Latest[/color]'
+        pos_hint: {'x': 25/262, 'y': 158/202}
+        size_hint_x: 232/262
+
+    SmallField:
+        text: 'Now  ' + app.CurrentConditions.DailyTemperature['Current']
+        pos_hint: {'x': 3/262, 'y': 51/202}
+        size_hint_x: 82/262
+    SmallField:
+        text: 'Actual H/L  ' + app.CurrentConditions.DailyTemperature['ActualHighLow']
+        pos_hint: {'x': 85/262, 'y': 51/202}
+        size_hint_x: 174/262
+
+    TimeDateField:
+        text: app.CurrentConditions.System['date']
+        pos_hint: {'x': 0/262, 'y': 24/202}
+        size_hint_x: 262/262
+    TimeDateField:
+        text: app.CurrentConditions.System['time']
+        pos_hint: {'x': 0/262, 'y': 3/202}
+        size_hint_x: 262/262
+
+<DailyTemperatureButton>:
+    PanelButton:
+        text: 'Daily Temp'
+        on_release: app.CurrentConditions.switchPanel(self)
